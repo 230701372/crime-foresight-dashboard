@@ -1,13 +1,77 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { AlertTriangle, BarChart3, Map, TrendingUp } from "lucide-react";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { StatCard } from "@/components/dashboard/stat-card";
+import { CrimeTrendChart } from "@/components/dashboard/crime-trend-chart";
+import { CrimeHeatmap } from "@/components/dashboard/crime-heatmap";
+import { PredictionChart } from "@/components/dashboard/prediction-chart";
+import { RecentIncidents } from "@/components/dashboard/recent-incidents";
+import { crimeTrendData, predictionData, recentIncidents } from "@/data/mock-data";
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+    <DashboardLayout>
+      <div className="space-y-8">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Crime Analytics Dashboard</h2>
+          <p className="text-muted-foreground">
+            Real-time crime data analysis and predictive forecasting
+          </p>
+        </div>
+        
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <StatCard 
+            title="Total Crime Rate" 
+            value="356"
+            description="Incidents this month"
+            icon={BarChart3}
+            trend={{ value: 12, positive: false }}
+          />
+          <StatCard 
+            title="Violent Crime" 
+            value="83"
+            description="Incidents this month"
+            icon={AlertTriangle}
+            trend={{ value: 8, positive: false }}
+          />
+          <StatCard 
+            title="Prediction Accuracy" 
+            value="92.4%"
+            description="Based on last 6 months"
+            icon={TrendingUp}
+            trend={{ value: 3, positive: true }}
+          />
+          <StatCard 
+            title="Active Hotspots" 
+            value="17"
+            description="Across the city"
+            icon={Map}
+            trend={{ value: 5, positive: true }}
+          />
+        </div>
+        
+        <div className="grid gap-4 lg:grid-cols-2">
+          <CrimeTrendChart 
+            data={crimeTrendData} 
+            title="Crime Rate Trends" 
+            subtitle="Year to date crime statistics by category"
+          />
+          <PredictionChart 
+            data={predictionData} 
+            title="Crime Predictions"
+            subtitle="Actual vs AI predicted crime rates"
+          />
+        </div>
+        
+        <div className="grid gap-4 lg:grid-cols-3">
+          <CrimeHeatmap 
+            title="Crime Hotspot Map"
+            className="lg:col-span-2" 
+          />
+          <RecentIncidents incidents={recentIncidents} />
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

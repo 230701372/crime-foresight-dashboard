@@ -61,6 +61,17 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				crime: {
+					low: '#3B82F6',    // blue for low crime rate
+					medium: '#F59E0B', // amber for medium crime rate
+					high: '#EF4444',   // red for high crime rate
+					prediction: '#8B5CF6' // purple for predictions
+				},
+				heatmap: {
+					low: '#3B82F6',
+					medium: '#F59E0B',
+					high: '#EF4444'
 				}
 			},
 			borderRadius: {
