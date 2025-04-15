@@ -13,38 +13,38 @@ const Index = () => {
     <DashboardLayout>
       <div className="space-y-8">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Crime Analytics Dashboard</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Indian Crime Analytics Dashboard</h2>
           <p className="text-muted-foreground">
-            Real-time crime data analysis and predictive forecasting
+            Real-time crime data analysis and predictive forecasting across India
           </p>
         </div>
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard 
             title="Total Crime Rate" 
-            value="356"
-            description="Incidents this month"
+            value="1,356"
+            description="Cases reported this month"
             icon={BarChart3}
             trend={{ value: 12, positive: false }}
           />
           <StatCard 
             title="Violent Crime" 
-            value="83"
-            description="Incidents this month"
+            value="283"
+            description="Cases this month"
             icon={AlertTriangle}
             trend={{ value: 8, positive: false }}
           />
           <StatCard 
             title="Prediction Accuracy" 
-            value="92.4%"
+            value="94.2%"
             description="Based on last 6 months"
             icon={TrendingUp}
             trend={{ value: 3, positive: true }}
           />
           <StatCard 
             title="Active Hotspots" 
-            value="17"
-            description="Across the city"
+            value="23"
+            description="Across major cities"
             icon={Map}
             trend={{ value: 5, positive: true }}
           />
