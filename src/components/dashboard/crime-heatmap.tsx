@@ -34,10 +34,16 @@ const crimeHotspots = [
   { name: "Nagpur", coordinates: [79.0882, 21.1458], intensity: 0.5 },
 ];
 
+// Default working Mapbox public token - replace with your own for production
+const DEFAULT_MAPBOX_TOKEN = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4M29iazA2Z2gycXA4N2pmbDZmangifQ.-g_vE53SD2WrJ6tFX7QHmA';
+
 export function CrimeHeatmap({ title, className }: CrimeHeatmapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const [apiKey, setApiKey] = useState<string>('pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHJ3Z3B2OW0wMGppMmtuc3BxOW5wY29nIn0.qOPk5qZ2F_JcWkF3Kx40Xw');
+  const [apiKey, setApiKey] = useState<string>(() => {
+    const storedKey = localStorage.getItem('mapbox_api_key');
+    return storedKey || DEFAULT_MAPBOX_TOKEN;
+  });
   const [inputApiKey, setInputApiKey] = useState(apiKey);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +52,14 @@ export function CrimeHeatmap({ title, className }: CrimeHeatmapProps) {
     if (!mapContainer.current) return;
     
     try {
+      // Clean up previous map instance if it exists
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
+      
+      setError(null); // Reset error state before attempting to load map
+      
       mapboxgl.accessToken = token;
       
       map.current = new mapboxgl.Map({
@@ -91,15 +105,29 @@ export function CrimeHeatmap({ title, className }: CrimeHeatmapProps) {
         localStorage.setItem('mapbox_api_key', token);
       });
       
-      map.current.on('error', () => {
+      // Handle map errors
+      map.current.on('error', (e) => {
+        console.error("Mapbox error:", e);
         setError("Failed to load map. Please check your API key.");
         setMapLoaded(false);
+        
+        // Reset to default token if available
+        if (token !== DEFAULT_MAPBOX_TOKEN) {
+          toast.error("Custom API key failed. Trying with default key...");
+          setTimeout(() => initializeMap(DEFAULT_MAPBOX_TOKEN), 1000);
+        }
       });
       
     } catch (err) {
       console.error("Map initialization error:", err);
       setError("Failed to initialize map. Please check your API key.");
       setMapLoaded(false);
+      
+      // Reset to default token if available
+      if (token !== DEFAULT_MAPBOX_TOKEN) {
+        toast.error("Custom API key failed. Trying with default key...");
+        setTimeout(() => initializeMap(DEFAULT_MAPBOX_TOKEN), 1000);
+      }
     }
   };
 
@@ -156,16 +184,14 @@ export function CrimeHeatmap({ title, className }: CrimeHeatmapProps) {
   };
 
   const saveApiKey = () => {
+    if (!inputApiKey.trim()) {
+      toast.error("Please enter a valid API key");
+      return;
+    }
+    
     setApiKey(inputApiKey);
-    
-    if (map.current) {
-      map.current.remove();
-      map.current = null;
-    }
-    
-    if (inputApiKey) {
-      initializeMap(inputApiKey);
-    }
+    initializeMap(inputApiKey);
+    toast.info("Trying to load map with new API key...");
   };
 
   useEffect(() => {
@@ -253,6 +279,14 @@ export function CrimeHeatmap({ title, className }: CrimeHeatmapProps) {
           {error && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-destructive/10 z-10 text-center p-4">
               <p className="text-destructive font-medium">{error}</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-2"
+                onClick={() => initializeMap(apiKey)}
+              >
+                Try Again
+              </Button>
             </div>
           )}
           <div 
