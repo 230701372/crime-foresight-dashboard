@@ -37,7 +37,7 @@ const crimeHotspots = [
 export function CrimeHeatmap({ title, className }: CrimeHeatmapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('mapbox_api_key') || '');
+  const [apiKey, setApiKey] = useState<string>('pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHJ3Z3B2OW0wMGppMmtuc3BxOW5wY29nIn0.qOPk5qZ2F_JcWkF3Kx40Xw');
   const [inputApiKey, setInputApiKey] = useState(apiKey);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
