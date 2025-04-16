@@ -1,53 +1,52 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ExternalLink } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { MapPin, HelpCircle } from "lucide-react";
+import { toast } from "sonner";
 
 interface CrimeHeatmapProps {
   title: string;
   className?: string;
 }
 
-// Sample hotspot data for major Indian cities
-const hotspots = [
-  { location: [72.8777, 19.0760], intensity: 0.9, name: "Mumbai" },
-  { location: [77.2090, 28.6139], intensity: 0.8, name: "Delhi" },
-  { location: [77.5946, 12.9716], intensity: 0.7, name: "Bangalore" },
-  { location: [80.2707, 13.0827], intensity: 0.7, name: "Chennai" },
-  { location: [88.3639, 22.5726], intensity: 0.8, name: "Kolkata" },
-  { location: [78.4867, 17.3850], intensity: 0.6, name: "Hyderabad" },
-  { location: [73.8567, 18.5204], intensity: 0.5, name: "Pune" },
-  { location: [75.8577, 22.7196], intensity: 0.4, name: "Indore" },
-  { location: [85.8245, 20.2961], intensity: 0.5, name: "Bhubaneswar" },
-  { location: [81.8463, 25.4358], intensity: 0.6, name: "Prayagraj" },
+// Indian cities with mock crime intensity
+const crimeHotspots = [
+  { name: "Delhi", coordinates: [77.1025, 28.7041], intensity: 0.9 },
+  { name: "Mumbai", coordinates: [72.8777, 19.0760], intensity: 0.85 },
+  { name: "Bangalore", coordinates: [77.5946, 12.9716], intensity: 0.7 },
+  { name: "Chennai", coordinates: [80.2707, 13.0827], intensity: 0.65 },
+  { name: "Kolkata", coordinates: [88.3639, 22.5726], intensity: 0.8 },
+  { name: "Hyderabad", coordinates: [78.4867, 17.3850], intensity: 0.75 },
+  { name: "Ahmedabad", coordinates: [72.5714, 23.0225], intensity: 0.6 },
+  { name: "Pune", coordinates: [73.8567, 18.5204], intensity: 0.55 },
+  { name: "Jaipur", coordinates: [75.7873, 26.9124], intensity: 0.5 },
+  { name: "Lucknow", coordinates: [80.9462, 26.8467], intensity: 0.6 },
+  { name: "Patna", coordinates: [85.1376, 25.5941], intensity: 0.7 },
+  { name: "Bhopal", coordinates: [77.4126, 23.2599], intensity: 0.45 },
+  { name: "Indore", coordinates: [75.8577, 22.7196], intensity: 0.4 },
+  { name: "Kanpur", coordinates: [80.3319, 26.4499], intensity: 0.65 },
+  { name: "Nagpur", coordinates: [79.0882, 21.1458], intensity: 0.5 },
 ];
 
 export function CrimeHeatmap({ title, className }: CrimeHeatmapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const [apiKey, setApiKey] = useState<string>("");
-  const [isMapLoaded, setIsMapLoaded] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
+  const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('mapbox_api_key') || '');
+  const [inputApiKey, setInputApiKey] = useState(apiKey);
+  const [mapLoaded, setMapLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Check if we have a stored API key in localStorage
-  useEffect(() => {
-    const storedKey = localStorage.getItem("mapbox_api_key");
-    if (storedKey) {
-      setApiKey(storedKey);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!mapContainer.current || !apiKey) return;
-
+  const initializeMap = (token: string) => {
+    if (!mapContainer.current) return;
+    
     try {
-      mapboxgl.accessToken = apiKey;
+      mapboxgl.accessToken = token;
       
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
@@ -57,193 +56,211 @@ export function CrimeHeatmap({ title, className }: CrimeHeatmapProps) {
       });
 
       map.current.on('load', () => {
-        if (!map.current) return;
-        setIsMapLoaded(true);
-        setError(null);
-
-        // Add heatmap layer
-        map.current.addSource('crime-hotspots', {
-          type: 'geojson',
-          data: {
-            type: 'FeatureCollection',
-            features: hotspots.map(spot => ({
-              type: 'Feature',
-              properties: {
-                intensity: spot.intensity,
-                name: spot.name
-              },
-              geometry: {
-                type: 'Point',
-                coordinates: spot.location
-              }
-            }))
-          }
-        });
-
-        map.current.addLayer({
-          id: 'crime-heat',
-          type: 'heatmap',
-          source: 'crime-hotspots',
-          paint: {
-            'heatmap-weight': ['get', 'intensity'],
-            'heatmap-intensity': 1,
-            'heatmap-color': [
-              'interpolate',
-              ['linear'],
-              ['heatmap-density'],
-              0, 'rgba(33,102,172,0)',
-              0.2, 'rgb(103,169,207)',
-              0.4, 'rgb(209,229,240)',
-              0.6, 'rgb(253,219,199)',
-              0.8, 'rgb(239,138,98)',
-              1, 'rgb(178,24,43)'
-            ],
-            'heatmap-radius': 30,
-            'heatmap-opacity': 0.8
-          }
-        });
-
-        // Add city markers
-        hotspots.forEach(spot => {
-          const popup = new mapboxgl.Popup({ offset: 25 }).setText(
-            `${spot.name}: Crime Intensity ${Math.round(spot.intensity * 100)}%`
-          );
+        setMapLoaded(true);
+        
+        // Add navigation control
+        map.current?.addControl(new mapboxgl.NavigationControl(), 'top-right');
+        
+        // Add markers for each hotspot
+        crimeHotspots.forEach(spot => {
+          // Create custom marker element
+          const el = document.createElement('div');
+          el.className = 'custom-marker';
+          el.style.backgroundColor = getColorForIntensity(spot.intensity);
+          el.style.width = `${Math.max(10, spot.intensity * 30)}px`;
+          el.style.height = `${Math.max(10, spot.intensity * 30)}px`;
+          el.style.borderRadius = '50%';
+          el.style.boxShadow = `0 0 ${Math.max(5, spot.intensity * 15)}px ${getColorForIntensity(spot.intensity)}`;
           
-          new mapboxgl.Marker({ color: "#FF5733" })
-            .setLngLat(spot.location)
+          // Add popup
+          const popup = new mapboxgl.Popup({ offset: 25 })
+            .setHTML(`<strong>${spot.name}</strong><br>Crime Intensity: ${(spot.intensity * 100).toFixed(0)}%`);
+
+          // Add marker with popup
+          new mapboxgl.Marker(el)
+            .setLngLat(spot.coordinates as [number, number])
             .setPopup(popup)
             .addTo(map.current!);
         });
 
-        // Add navigation controls
-        map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+        // Add a legend
+        addLegend();
+        
+        setError(null);
+        toast.success("Map loaded successfully");
+        localStorage.setItem('mapbox_api_key', token);
       });
-
-      // Save valid API key to localStorage
-      localStorage.setItem("mapbox_api_key", apiKey);
       
-      return () => {
-        map.current?.remove();
-      };
+      map.current.on('error', () => {
+        setError("Failed to load map. Please check your API key.");
+        setMapLoaded(false);
+      });
+      
     } catch (err) {
-      setError("Invalid API key or Map loading error");
-      console.error("Map error:", err);
+      console.error("Map initialization error:", err);
+      setError("Failed to initialize map. Please check your API key.");
+      setMapLoaded(false);
     }
-  }, [apiKey]);
-
-  const handleApiKeySubmit = () => {
-    setIsMapLoaded(false);
-    // The useEffect will handle the map initialization with the new key
   };
+
+  const addLegend = () => {
+    if (!map.current || !mapContainer.current) return;
+    
+    const legendContainer = document.createElement('div');
+    legendContainer.className = 'map-legend';
+    legendContainer.style.position = 'absolute';
+    legendContainer.style.bottom = '30px';
+    legendContainer.style.left = '10px';
+    legendContainer.style.backgroundColor = 'rgba(0,0,0,0.7)';
+    legendContainer.style.padding = '10px';
+    legendContainer.style.borderRadius = '5px';
+    legendContainer.style.color = 'white';
+    legendContainer.style.zIndex = '1';
+    
+    const title = document.createElement('div');
+    title.textContent = 'Crime Intensity';
+    title.style.fontWeight = 'bold';
+    title.style.marginBottom = '5px';
+    
+    legendContainer.appendChild(title);
+    
+    const intensities = [0.9, 0.7, 0.5, 0.3];
+    intensities.forEach(intensity => {
+      const item = document.createElement('div');
+      item.style.display = 'flex';
+      item.style.alignItems = 'center';
+      item.style.margin = '5px 0';
+      
+      const color = document.createElement('div');
+      color.style.width = '20px';
+      color.style.height = '10px';
+      color.style.backgroundColor = getColorForIntensity(intensity);
+      color.style.marginRight = '5px';
+      
+      const label = document.createElement('span');
+      label.textContent = `${(intensity * 100).toFixed(0)}%`;
+      
+      item.appendChild(color);
+      item.appendChild(label);
+      legendContainer.appendChild(item);
+    });
+    
+    mapContainer.current.appendChild(legendContainer);
+  };
+
+  const getColorForIntensity = (intensity: number): string => {
+    if (intensity > 0.8) return '#EF4444'; // red for high
+    if (intensity > 0.6) return '#F59E0B'; // amber for medium
+    if (intensity > 0.4) return '#FBBF24'; // yellow for low-medium
+    return '#3B82F6'; // blue for low
+  };
+
+  const saveApiKey = () => {
+    setApiKey(inputApiKey);
+    
+    if (map.current) {
+      map.current.remove();
+      map.current = null;
+    }
+    
+    if (inputApiKey) {
+      initializeMap(inputApiKey);
+    }
+  };
+
+  useEffect(() => {
+    if (apiKey) {
+      initializeMap(apiKey);
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (map.current) {
+        map.current.remove();
+      }
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Card className={className}>
-      <CardHeader>
-        <CardTitle className="text-base flex justify-between items-center">
-          {title}
-          {apiKey && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 text-xs" 
-              onClick={() => setShowHelp(true)}
-            >
-              Need Help?
-            </Button>
-          )}
-        </CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-md font-medium">{title}</CardTitle>
+        <div className="flex items-center gap-2">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">Set API Key</Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Mapbox API Key</DialogTitle>
+                <DialogDescription>
+                  Enter your Mapbox API key to display the crime heatmap. You can get a free API key from <a href="https://account.mapbox.com/auth/signup/" target="_blank" rel="noreferrer" className="text-primary hover:underline">Mapbox</a>.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="apikey" className="text-right">API Key</Label>
+                  <Input
+                    id="apikey"
+                    value={inputApiKey}
+                    onChange={(e) => setInputApiKey(e.target.value)}
+                    placeholder="Enter Mapbox API key"
+                    className="col-span-3"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" onClick={saveApiKey}>Save</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <HelpCircle className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>About the Crime Heatmap</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4 text-sm text-muted-foreground">
+                <p>This map displays crime hotspots across major Indian cities. The size and color of each marker represents the crime intensity in that area.</p>
+                <p>To use this feature:</p>
+                <ol className="list-decimal pl-4 space-y-2">
+                  <li>Create a free account at <a href="https://account.mapbox.com/auth/signup/" target="_blank" rel="noreferrer" className="text-primary hover:underline">Mapbox</a></li>
+                  <li>Generate a new API key (default public token)</li>
+                  <li>Click "Set API Key" and paste your token</li>
+                </ol>
+                <p>The map will display crime intensity data across India with interactive markers for detailed information.</p>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
-        {!apiKey ? (
-          <div className="space-y-4">
-            <div className="p-4 border rounded-md bg-amber-50 border-amber-200 text-amber-700">
-              <h3 className="font-medium mb-2">Free Mapbox API Key Required</h3>
-              <p className="text-sm">
-                This heatmap uses Mapbox which requires a free public token. Follow these steps:
+        <div className="relative rounded-md overflow-hidden">
+          {!apiKey && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/50 z-10 text-center p-4">
+              <MapPin className="h-8 w-8 text-muted-foreground mb-2" />
+              <h3 className="text-lg font-medium">API Key Required</h3>
+              <p className="text-sm text-muted-foreground max-w-xs">
+                Please set your Mapbox API key to view the crime heatmap. You can get a free API key from Mapbox.
               </p>
-              <ol className="list-decimal text-sm ml-5 mt-2 space-y-1">
-                <li>Sign up for a free account at <a href="https://mapbox.com/signup" target="_blank" rel="noopener noreferrer" className="underline">mapbox.com</a></li>
-                <li>Go to your account dashboard</li>
-                <li>Copy your default public token</li>
-                <li>Paste it below</li>
-              </ol>
             </div>
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                placeholder="Enter your Mapbox public token"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="flex-1"
-              />
-              <Button onClick={handleApiKeySubmit}>Load Map</Button>
+          )}
+          {error && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-destructive/10 z-10 text-center p-4">
+              <p className="text-destructive font-medium">{error}</p>
             </div>
-            {error && <p className="text-sm text-red-500">{error}</p>}
-          </div>
-        ) : (
-          <div className="aspect-[16/9] overflow-hidden rounded-md border border-border bg-muted/20 relative">
-            <div ref={mapContainer} className="absolute inset-0" />
-            {isMapLoaded ? (
-              <div className="absolute bottom-4 right-4 p-2 bg-card/90 border border-border rounded-md shadow-sm">
-                <div className="flex items-center space-x-4 text-xs">
-                  <div className="flex items-center space-x-1">
-                    <div className="h-3 w-3 rounded-full bg-[rgb(103,169,207)]"></div>
-                    <span>Low</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <div className="h-3 w-3 rounded-full bg-[rgb(253,219,199)]"></div>
-                    <span>Medium</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <div className="h-3 w-3 rounded-full bg-[rgb(178,24,43)]"></div>
-                    <span>High</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <p className="mb-2">Loading map...</p>
-                  {error && (
-                    <p className="text-sm text-red-500 max-w-xs mx-auto">
-                      {error}. Please check your Mapbox token and try again.
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        <Dialog open={showHelp} onOpenChange={setShowHelp}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>About Mapbox API Keys</DialogTitle>
-            </DialogHeader>
-            <DialogDescription>
-              <div className="space-y-4 text-sm">
-                <p>
-                  Mapbox requires an API key to function. Your key is stored locally in your browser and 
-                  is only used to display the map on this page.
-                </p>
-                <p>
-                  To reset your API key, clear your browser's local storage and refresh the page.
-                </p>
-                <div className="flex items-center gap-2 bg-muted p-3 rounded-md">
-                  <ExternalLink className="h-4 w-4" />
-                  <a 
-                    href="https://docs.mapbox.com/help/getting-started/access-tokens/" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary underline"
-                  >
-                    Learn more about Mapbox access tokens
-                  </a>
-                </div>
-              </div>
-            </DialogDescription>
-          </DialogContent>
-        </Dialog>
+          )}
+          <div 
+            ref={mapContainer} 
+            style={{ height: '400px', width: '100%' }}
+            className={`border rounded-lg ${(!apiKey || error) ? 'opacity-50' : ''}`} 
+          />
+        </div>
       </CardContent>
     </Card>
   );
